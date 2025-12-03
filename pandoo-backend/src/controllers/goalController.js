@@ -1,0 +1,71 @@
+// The model file in `src/models` is named `Goals.js`, so require that file.
+const Goal = require('../models/Goals');
+
+// @desc    Create a new Savings Goal
+// @route   POST /api/goals
+exports.addGoal = async (req, res) => {
+  try {
+    const { name, targetAmount, savedAmount, icon, color, deadline } = req.body;
+
+    const newGoal = new Goal({
+      userId: req.user.userId,
+      name,
+      targetAmount,
+      savedAmount: savedAmount || 0,
+      icon,
+      color,
+      deadline
+    });
+
+    const goal = await newGoal.save();
+    res.status(201).json({ success: true, data: goal });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};
+
+// @desc    Get all goals for the user
+// @route   GET /api/goals
+exports.getGoals = async (req, res) => {
+  try {
+    const goals = await Goal.find({ userId: req.user.userId }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: goals.length,
+      data: goals
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};
+
+// @desc    Update Goal Progress (Add money to goal)
+// @route   PUT /api/goals/:id
+exports.updateGoal = async (req, res) => {
+  try {
+    const { savedAmount } = req.body;
+    
+    // Find goal and update only the savedAmount
+    let goal = await Goal.findById(req.params.id);
+
+    if (!goal) return res.status(404).json({ msg: 'Goal not found' });
+
+    // Ensure user owns this goal
+    if (goal.userId.toString() !== req.user.userId) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    goal.savedAmount = savedAmount;
+    await goal.save();
+
+    res.json({ success: true, data: goal });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};
