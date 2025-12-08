@@ -1,52 +1,86 @@
 const Transaction = require('../models/Transaction');
-const User = require('../models/User'); // <--- Capital 'U' is crucial!
+const User = require('../models/User');
 
-// @desc    Get AI Financial Advice
+// @desc    Get List of AI Recommendations
 // @route   GET /api/ai/tips
 exports.getAiAdvice = async (req, res) => {
   try {
     const userId = req.user.userId;
-    
-    // 1. Fetch User Data
     const transactions = await Transaction.find({ userId });
+    const user = await User.findById(userId);
 
-    // 2. Basic Analysis Logic
     let totalIncome = 0;
     let totalExpense = 0;
-    let foodExpense = 0;
+    const categoryTotals = {};
 
+    // 1. Analyze Data
     transactions.forEach(txn => {
       if (txn.type === 'income') totalIncome += txn.amount;
       if (txn.type === 'expense') {
         totalExpense += txn.amount;
-        if (txn.category === 'Food' || txn.category === 'Groceries') {
-          foodExpense += txn.amount;
-        }
+        // Track category spending
+        categoryTotals[txn.category] = (categoryTotals[txn.category] || 0) + txn.amount;
       }
     });
 
-    // 3. Generate Advice
-    let advice = "Keep tracking your expenses to stay healthy!";
-    let mood = "Happy";
+    // 2. Generate Recommendations Array
+    const recommendations = [];
 
+    // --- Tip A: Health Check ---
     if (totalExpense > totalIncome && totalIncome > 0) {
-      advice = "⚠️ Warning: You are spending more than you earn! Pandoo is worried.";
-      mood = "Worried";
-    } else if (foodExpense > (totalExpense * 0.4)) {
-      advice = "🍔 You spent over 40% of your budget on Food. Try cooking at home next week!";
-      mood = "Surprised";
-    } else if (totalIncome > 0 && totalExpense < (totalIncome * 0.5)) {
-      advice = "🚀 Amazing! You saved more than 50% of your income. You are a savings pro!";
-      mood = "Excited";
+      recommendations.push({
+        title: "High Spending Alert",
+        content: `You spent more than you earned this month. Review your expenses.`,
+        type: "warning"
+      });
+    } else {
+      recommendations.push({
+        title: "Healthy Balance",
+        content: "You are spending within your means. Great job!",
+        type: "success"
+      });
     }
 
-    // 4. Send Response
+    // --- Tip B: Top Expense Category ---
+    let highestCat = "";
+    let highestAmount = 0;
+    for (const [cat, amount] of Object.entries(categoryTotals)) {
+      if (amount > highestAmount) {
+        highestAmount = amount;
+        highestCat = cat;
+      }
+    }
+
+    if (highestCat) {
+      recommendations.push({
+        title: "Top Expense",
+        content: `Your highest spending is on '${highestCat}' ($${highestAmount}). Can you reduce this?`,
+        type: "info"
+      });
+    }
+
+    // --- Tip C: General Savings ---
+    const savings = totalIncome - totalExpense;
+    if (savings > (totalIncome * 0.2)) {
+      recommendations.push({
+        title: "Savings Goal",
+        content: "You saved over 20% of your income! Consider investing the surplus.",
+        type: "success"
+      });
+    } else {
+      recommendations.push({
+        title: "Optimize Savings",
+        content: "Try to save at least 20% of your income next month.",
+        type: "info"
+      });
+    }
+
+    // 3. Send List
     res.json({
       success: true,
       data: {
-        tip: advice,
-        mood: mood,
-        generatedAt: new Date()
+        tips: recommendations, // Array of cards
+        score: user.financialHealthScore || 50 // Send score for the Gauge
       }
     });
 

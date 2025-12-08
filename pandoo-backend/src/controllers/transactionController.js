@@ -111,3 +111,53 @@ exports.getRecurringTransactions = async (req, res) => {
     res.status(500).json({ error: 'Server Error' });
   }
 };
+
+exports.getCategoryBreakdown = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const transactions = await Transaction.find({ userId, type: 'expense' });
+
+    const categoryMap = {};
+    let totalExpense = 0;
+
+    // 1. Group by Category
+    transactions.forEach(txn => {
+      const cat = txn.category;
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = 0;
+      }
+      categoryMap[cat] += txn.amount;
+      totalExpense += txn.amount;
+    });
+
+    // 2. Format for Frontend
+    const breakdown = Object.keys(categoryMap).map(key => {
+      const amount = categoryMap[key];
+      const percent = totalExpense > 0 ? (amount / totalExpense) * 100 : 0;
+      
+      // Assign Colors based on category name (Simple logic)
+      let color = "#9E9E9E"; // Default Grey
+      if (key.includes('Food') || key.includes('Groceries')) color = "#FF4081"; // Pink
+      if (key.includes('Transport') || key.includes('Fuel')) color = "#2196F3"; // Blue
+      if (key.includes('Shopping')) color = "#FFC107"; // Amber
+      if (key.includes('Bill') || key.includes('Rent')) color = "#4CAF50"; // Green
+      if (key.includes('Freelance')) color = "#10B981"; // Emerald
+
+      return {
+        category: key,
+        value: Math.round(percent), // Send percentage for Pie Chart
+        amount: amount,
+        color: color
+      };
+    });
+
+    res.json({
+      success: true,
+      data: breakdown
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};

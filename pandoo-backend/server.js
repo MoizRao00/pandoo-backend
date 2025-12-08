@@ -26,12 +26,16 @@ mongoose.connect(DB_URI)
   });
 
 // Routes
+
+
 app.use('/api/auth', require('./src/routes/authRoutes'));
 console.log("🚩 Server is trying to load transaction routes...");
 app.use('/api/transactions', require('./src/routes/transactionRoutes')); 
 app.use('/api/goals', require('./src/routes/goalRoutes'));
 app.use('/api/ai', require('./src/routes/aiRoutes'));
 app.use('/api/split', require('./src/routes/splitRoutes'));
+app.use('/api/leaderboard', require('./src/routes/leaderBoardRoutes'));
+
 
 // Test Route
 app.get('/', (req, res) => {
@@ -40,6 +44,7 @@ app.get('/', (req, res) => {
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+// Add '0.0.0.0' as the second argument
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

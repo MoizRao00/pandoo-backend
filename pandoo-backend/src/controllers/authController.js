@@ -7,43 +7,48 @@ exports.register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
+    // --- DEBUG LOGS ---
+    console.log("\n⚠️ REGISTER ATTEMPT ⚠️");
+    console.log(`1. Username: '${username}'`);
+    console.log(`2. Email:    '${email}'`);
+    console.log(`3. Password: '${password}'`); // Check for spaces here!
+    // ------------------
+
     // 1. Check if user already exists
     let user = await User.findOne({ email });
     if (user) {
+      console.log("❌ Register Failed: User already exists");
       return res.status(400).json({ msg: 'User already exists' });
     }
 
-    // 2. Encrypt the password
+    // 2. Encrypt
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. Create new user
+    console.log(`✅ Password hashed successfully: ${hashedPassword.substring(0, 15)}...`);
+
+    // 3. Create user
     user = new User({
       username,
       email,
-      password: hashedPassword
+      password: password
     });
 
     await user.save();
+    console.log("🎉 User saved to MongoDB!");
 
-    // 4. Create a Token (So they are logged in immediately)
+    // 4. Token
     const payload = { userId: user.id };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    // 5. Send success response
     res.status(201).json({ 
       msg: 'User registered successfully', 
       token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        financialHealthScore: user.financialHealthScore
-      }
+      user: { id: user.id, username: user.username, email: user.email }
     });
 
   } catch (err) {
-    console.error(err.message);
+    console.error("SERVER ERROR:", err.message);
     res.status(500).send('Server Error');
   }
 };
@@ -55,19 +60,39 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // --- DEBUGGING LOGS (Start) ---
+    console.log("\n⚠️ LOGIN ATTEMPT RECEIVED ⚠️");
+    console.log(`1. Email from App:    '${email}'`); // Quotes help us see spaces
+    console.log(`2. Password from App: '${password}'`);
+    // -----------------------------
+
     // 1. Check if user exists
     const user = await User.findOne({ email });
+    
     if (!user) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
+      console.log("❌ FAILURE: User not found in database.");
+      
+      // Let's print all users to see what is actually saved
+      const allUsers = await User.find();
+      console.log("   --> Emails currently in DB:", allUsers.map(u => u.email));
+      
+      return res.status(400).json({ msg: 'Invalid Credentials (User not found)' });
     }
 
-    // 2. Check if password matches (Compare plain text vs. Encrypted DB hash)
+    console.log(`✅ SUCCESS: User found: '${user.email}'`);
+    console.log(`3. Hashed Password in DB: ${user.password.substring(0, 20)}...`);
+
+    // 2. Check if password matches
     const isMatch = await bcrypt.compare(password, user.password);
+    
     if (!isMatch) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
+      console.log("❌ FAILURE: Password does not match.");
+      return res.status(400).json({ msg: 'Invalid Credentials (Password wrong)' });
     }
 
-    // 3. Generate Token (Same as register)
+    console.log("🎉 SUCCESS: Password Matched! Logging in...");
+
+    // 3. Generate Token
     const payload = { userId: user.id };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
@@ -84,7 +109,7 @@ exports.login = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err.message);
+    console.error("SERVER ERROR:", err.message);
     res.status(500).send('Server Error');
   }
 };
