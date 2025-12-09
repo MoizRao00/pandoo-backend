@@ -31,9 +31,8 @@ exports.register = async (req, res) => {
     user = new User({
       username,
       email,
-      password: password
+      password: password // This is WRONG, should be hashedPassword later should be changed
     });
-
     await user.save();
     console.log("🎉 User saved to MongoDB!");
 

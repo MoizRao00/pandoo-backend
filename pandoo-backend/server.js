@@ -9,12 +9,11 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- DEBUG LOGGER (Add this!) ---
 app.use((req, res, next) => {
   console.log(`📢 Request received: ${req.method} ${req.url}`);
   next();
 });
-// --------------------------------
+
 
 // Database Connection 
 const DB_URI = "mongodb://raomoiz474_db_user:Moiz_123@ac-pe1orif-shard-00-00.wefmutr.mongodb.net:27017,ac-pe1orif-shard-00-01.wefmutr.mongodb.net:27017,ac-pe1orif-shard-00-02.wefmutr.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-evt0tu-shard-0&authSource=admin&retryWrites=true&w=majority";
