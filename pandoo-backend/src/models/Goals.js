@@ -7,28 +7,24 @@ const GoalSchema = new mongoose.Schema({
     required: true
   },
   name: {
-    type: String, // e.g., "Vacation to Bali"
+    type: String,
     required: true,
     trim: true
   },
   targetAmount: {
-    type: Number, // e.g., 5000
+    type: Number,
     required: true
   },
   savedAmount: {
-    type: Number, // e.g., 2500
+    type: Number,
     default: 0
   },
   icon: {
-    type: String, // You can store an emoji or icon name (e.g., "✈️" or "plane")
-    default: "🎯" 
-  },
-  color: {
-    type: String, // Store hex code like "#FF5733" for the progress bar color
-    default: "#10B981" // Emerald Green
+    type: String,
+    default: "🎯"
   },
   deadline: {
-    type: Date // Optional: "By Dec 2025"
+    type: Date
   }
 }, { timestamps: true });
 

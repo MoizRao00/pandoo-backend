@@ -1,11 +1,9 @@
 // The model file in `src/models` is named `Goals.js`, so require that file.
 const Goal = require('../models/Goals');
 
-// @desc    Create a new Savings Goal
-// @route   POST /api/goals
 exports.addGoal = async (req, res) => {
   try {
-    const { name, targetAmount, savedAmount, icon, color, deadline } = req.body;
+    const { name, targetAmount, savedAmount, icon, deadline } = req.body;
 
     const newGoal = new Goal({
       userId: req.user.userId,
@@ -13,7 +11,6 @@ exports.addGoal = async (req, res) => {
       targetAmount,
       savedAmount: savedAmount || 0,
       icon,
-      color,
       deadline
     });
 
@@ -26,8 +23,7 @@ exports.addGoal = async (req, res) => {
   }
 };
 
-// @desc    Get all goals for the user
-// @route   GET /api/goals
+
 exports.getGoals = async (req, res) => {
   try {
     const goals = await Goal.find({ userId: req.user.userId }).sort({ createdAt: -1 });
@@ -43,8 +39,6 @@ exports.getGoals = async (req, res) => {
   }
 };
 
-// @desc    Update Goal Progress (Add money to goal)
-// @route   PUT /api/goals/:id
 exports.updateGoal = async (req, res) => {
   try {
     const { savedAmount } = req.body;
@@ -66,6 +60,28 @@ exports.updateGoal = async (req, res) => {
 
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};
+
+exports.deleteGoal = async (req, res) => {
+  try {
+    const goalId = req.params.id;
+    
+    // 1. Find and Delete in one step (Much safer)
+    const deletedGoal = await Goal.findOneAndDelete({ 
+      _id: goalId, 
+      userId: req.user.userId // Ensure user owns it
+    });
+
+    if (!deletedGoal) {
+      return res.status(404).json({ msg: 'Goal not found or unauthorized' });
+    }
+
+    res.json({ success: true, msg: 'Goal removed' });
+
+  } catch (err) {
+    console.error("Delete Error:", err);
     res.status(500).json({ error: 'Server Error' });
   }
 };

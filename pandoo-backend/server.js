@@ -26,8 +26,8 @@ mongoose.connect(DB_URI)
 
 // Routes
 
-
 app.use('/api/auth', require('./src/routes/authRoutes'));
+app.use('/api/users', require('./src/routes/userRoutes'));
 console.log("🚩 Server is trying to load transaction routes...");
 app.use('/api/transactions', require('./src/routes/transactionRoutes')); 
 app.use('/api/goals', require('./src/routes/goalRoutes'));

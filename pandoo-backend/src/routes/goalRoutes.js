@@ -12,5 +12,6 @@ router.get('/', auth, goalController.getGoals);
 
 router.put('/:id', auth, goalController.updateGoal);
 
+router.delete('/:id', auth, goalController.deleteGoal);
 
 module.exports = router;

@@ -6,6 +6,10 @@ const SplitGroupSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+
+  startDate: { type: Date },
+  endDate: { type: Date },
+
   status: {
     type: String,
     enum: ['Active', 'Finished'],
@@ -25,5 +29,7 @@ const SplitGroupSchema = new mongoose.Schema({
     ref: 'User'
   }]
 }, { timestamps: true });
+
+SplitGroupSchema.index({ members: 1 });
 
 module.exports = mongoose.model('SplitGroup', SplitGroupSchema);

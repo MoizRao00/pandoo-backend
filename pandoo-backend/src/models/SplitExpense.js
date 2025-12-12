@@ -19,10 +19,18 @@ const SplitExpenseSchema = new mongoose.Schema({
     type: String, // e.g., "Dinner at Bistro"
     required: true
   },
+  splitBetween: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  
   date: {
     type: Date,
     default: Date.now
   }
 }, { timestamps: true });
+
+SplitExpenseSchema.index({ groupId: 1 }); 
+SplitExpenseSchema.index({ paidBy: 1 });
 
 module.exports = mongoose.model('SplitExpense', SplitExpenseSchema);

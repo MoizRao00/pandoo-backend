@@ -15,12 +15,19 @@ exports.register = async (req, res) => {
     // ------------------
 
     // 1. Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) {
-      console.log("❌ Register Failed: User already exists");
-      return res.status(400).json({ msg: 'User already exists' });
-    }
+   const existingUser = await User.findOne({ 
+      $or: [{ email }, { username }] 
+    });
 
+    if (existingUser) {
+      if (existingUser.email === email) {
+        return res.status(400).json({ msg: 'User already exists' });
+      }
+      if (existingUser.username === username) {
+        return res.status(400).json({ msg: 'Username is taken' });
+      }
+    }
+    
     // 2. Encrypt
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -28,10 +35,11 @@ exports.register = async (req, res) => {
     console.log(`✅ Password hashed successfully: ${hashedPassword.substring(0, 15)}...`);
 
     // 3. Create user
-    user = new User({
+    const user = new User({
       username,
       email,
-      password: password // This is WRONG, should be hashedPassword later should be changed
+      password: hashedPassword,
+      avatar: avatar || "panda"
     });
     await user.save();
     console.log("🎉 User saved to MongoDB!");
@@ -43,7 +51,7 @@ exports.register = async (req, res) => {
     res.status(201).json({ 
       msg: 'User registered successfully', 
       token,
-      user: { id: user.id, username: user.username, email: user.email }
+      user: { id: user.id, username: user.username, email: user.email, avatar: user.avatar }
     });
 
   } catch (err) {
@@ -110,5 +118,111 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error("SERVER ERROR:", err.message);
     res.status(500).send('Server Error');
+  }
+};
+
+
+const { OAuth2Client } = require('google-auth-library');
+const appleSignin = require('apple-signin-auth');
+
+// Initialize Google Client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Google Login
+exports.googleLogin = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    // 1. Verify Google Token
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID, // Client ID from Google Cloud Console
+    });
+    const { email, name, sub } = ticket.getPayload(); // 'sub' is Google's unique user ID
+
+    console.log(`\n⚠️ GOOGLE LOGIN: ${email}`);
+
+    // 2. Check if user exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      console.log("✅ User found. Logging in...");
+    } else {
+      console.log("🆕 User not found. Creating new account...");
+      // 3. Create user if not exists
+      // Note: We generate a dummy password since they use social login
+      user = new User({
+        username: name,
+        email,
+        password: await bcrypt.hash(Math.random().toString(36), 10), 
+        googleId: sub, // Optional: Add this field to your Schema to link explicitly
+      });
+      await user.save();
+    }
+
+    // 4. Generate JWT
+    const payload = { userId: user.id };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      msg: 'Google Login successful',
+      token,
+      user: { id: user.id, username: user.username, email: user.email }
+    });
+
+  } catch (err) {
+    console.error("GOOGLE AUTH ERROR:", err.message);
+    res.status(400).json({ msg: 'Google Sign-In Failed' });
+  }
+};
+
+// Apple Login
+exports.appleLogin = async (req, res) => {
+  try {
+    const { identityToken, fullName } = req.body; 
+    
+    // Note: Apple only sends 'fullName' on the very first sign-in.
+    // Your frontend must capture it and send it here.
+
+    // 1. Verify Apple Token
+    const { email, sub } = await appleSignin.verifyIdToken(identityToken, {
+      audience: process.env.APPLE_CLIENT_ID, // Service ID or Bundle ID
+      ignoreExpiration: true,
+    });
+
+    console.log(`\n🍎 APPLE LOGIN: ${email}`);
+
+    // 2. Check if user exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      console.log("✅ User found. Logging in...");
+    } else {
+      console.log("🆕 User not found. Creating new account...");
+      
+      const name = fullName ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() : "Apple User";
+      
+      user = new User({
+        username: name || "Apple User",
+        email,
+        password: await bcrypt.hash(Math.random().toString(36), 10),
+        appleId: sub,
+      });
+      await user.save();
+    }
+
+    // 3. Generate JWT
+    const payload = { userId: user.id };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      msg: 'Apple Login successful',
+      token,
+      user: { id: user.id, username: user.username, email: user.email }
+    });
+
+  } catch (err) {
+    console.error("APPLE AUTH ERROR:", err.message);
+    res.status(400).json({ msg: 'Apple Sign-In Failed' });
   }
 };

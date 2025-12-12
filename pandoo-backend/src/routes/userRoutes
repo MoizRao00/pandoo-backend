@@ -1,0 +1,8 @@
+const express = require('express');
+const router = express.Router();
+const userController = require('../controllers/userController');const auth = require('../middleware/authMiddleware');
+
+// @route   GET /api/users/search?query=ali
+router.get('/search', auth, userController.searchUsers);
+
+module.exports = router;
