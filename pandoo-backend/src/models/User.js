@@ -18,7 +18,18 @@ const UserSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
+
+  // 👇 ADDED: Social Login IDs (Important for your fix)
+  googleId: { type: String },
+  appleId: { type: String },
   
+  isMfaEnabled: { type: Boolean, default: false },
+provider: { type: String, default: 'email' },
+  mfaOtp: { type: String },
+  mfaOtpExpires: { type: Date },
+
+  isGuest: { type: Boolean, default: false },
+
   // -- Financial & Plaid Data --
   currency: { type: String, default: 'USD' },
   plaidAccessToken: { type: String, default: null }, // Will be encrypted
